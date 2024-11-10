@@ -57,12 +57,15 @@ runs:
     uses: actions/setup-node@v3
     with:
       node-version: '18'
-      cache: 'npm'
 
   - name: Install dependencies
     shell: bash
     run: |
-      npm ci || npm install
+      # Create temporary package.json if needed
+      if [ ! -f package.json ]; then
+        echo '{"name":"temp-pear-review","private":true}' > package.json
+      fi
+      # Install dependencies globally to avoid lock file issues
       npm install -g genaiscript
 
   - name: Run Pear Review Annotate
