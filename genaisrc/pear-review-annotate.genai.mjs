@@ -1,6 +1,7 @@
 script({
     title: "Pear Review Annotate",
     description: "Review the current pull request and provide annotations.",
+    model: "openai:gpt-4o",
     system: [
         "system",
         "system.annotations",

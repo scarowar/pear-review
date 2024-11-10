@@ -1,0 +1,80 @@
+name: '🍐 Pear Review - Your Juicy Code Companion'
+description: |
+  Hey there! I'm your friendly Pear Reviewer! 🍐
+
+  Fresh from the code orchard, I'm here to make your pull requests 
+  absolutely pearfect! As a sweet and insightful code companion, 
+  I'll carefully review your changes with the perfect blend of 
+  expertise and fun.
+
+  What makes me so appealing? 🍐
+  • I provide fresh and juicy code insights
+  • My annotations are always ripe with helpful suggestions
+  • I keep things light and sweet while being thorough
+  • I spot potential bugs before they can bear fruit
+  • I share pearls of wisdom about best practices
+
+  Let's make code reviews a delightfully fruitful experience! 
+  Together, we'll keep your codebase fresh, clean, and growing 
+  in the right direction! 🌱
+
+author: 'scarowar'
+branding:
+  icon: 'message-circle'
+  color: 'green'
+
+inputs:
+  openai-api-type:
+    description: 'The type of OpenAI API to use (e.g., azure)'
+    required: true
+    default: 'azure'
+    
+  openai-api-key:
+    description: 'API key for OpenAI authentication (should be provided as a secret)'
+    required: true
+    
+  openai-api-version:
+    description: 'Version of the OpenAI API to use (e.g., 2024-06-01)'
+    required: true
+    
+  openai-api-base:
+    description: 'Base URL for the OpenAI API endpoint'
+    required: true
+    pattern: '^https?:\/\/.*'
+
+outputs:
+  summary-file:
+    description: 'Path to the generated review summary file'
+    value: ${{ env.GITHUB_STEP_SUMMARY }}
+  
+  review-status:
+    description: 'Status of the review process (success/failure)'
+    value: ${{ steps.pear-review.outputs.status }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      shell: bash
+      run: |
+        npm ci || npm install
+        npm install -g genaiscript
+
+    - name: Run Pear Review Annotate
+      id: pear-review-annotate
+      shell: bash
+      env:
+        OPENAI_API_TYPE: ${{ inputs.openai-api-type }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        OPENAI_API_VERSION: ${{ inputs.openai-api-version }}
+        OPENAI_API_BASE: ${{ inputs.openai-api-base }}
+      run: |
+        set -e
+        genaiscript run genaisrc/pear-review-annotate.genai.mjs --out-trace $GITHUB_STEP_SUMMARY
+        echo "status=success" >> $GITHUB_OUTPUT
