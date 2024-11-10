@@ -12,10 +12,10 @@ script({
 })
 
 try {
-    const defaultBranch = await git.defaultBranch();
+    const commit = env.vars.commit || "HEAD"
 
     const changes = await git.diff({
-        base: defaultBranch,
+        head: commit,
     });
     console.log(changes)
 
@@ -23,7 +23,7 @@ try {
         console.log("No changes detected. Exiting...");
     }
 
-    def("GIT_DIFF", changes, { maxTokens: 20000 });
+    def("GIT_DIFF", changes, { language: "diff", maxTokens: 20000 })
 } catch (error) {
     console.error("An error occurred while fetching the default branch or diff:", error);
 }
