@@ -78,5 +78,5 @@ runs:
       OPENAI_API_BASE: ${{ inputs.openai-api-base }}
     run: |
       set -e
-      genaiscript run genaisrc/pear-review-annotate.genai.mjs --out-trace $GITHUB_STEP_SUMMARY
+      genaiscript run ${{ github.action_path }}/genaisrc/pear-review-annotate.genai.mjs --out-trace $GITHUB_STEP_SUMMARY
       echo "status=success" >> $GITHUB_OUTPUT
