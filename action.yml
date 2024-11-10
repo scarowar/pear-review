@@ -64,7 +64,6 @@ runs:
     shell: bash
     run: |
       git fetch origin
-      git pull origin ${{ github.base_ref }}:${{ github.base_ref }}
 
   - name: Setup Node.js
     uses: actions/setup-node@v3
