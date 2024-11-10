@@ -88,6 +88,8 @@ runs:
       OPENAI_API_KEY: ${{ inputs.openai-api-key }}
       OPENAI_API_VERSION: ${{ inputs.openai-api-version }}
       OPENAI_API_BASE: ${{ inputs.openai-api-base }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_COMMIT_SHA: ${{ github.event.pull_request.head.sha}}
     run: |
       set -e
       genaiscript run ${{ github.action_path }}/genaisrc/pear-review-annotate.genai.mjs --out-trace $GITHUB_STEP_SUMMARY --pull-request-reviews
