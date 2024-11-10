@@ -24,6 +24,9 @@ branding:
   color: 'green'
 
 inputs:
+  github-token:
+    description: 'GitHub token for authentication (should be provided as a secret)'
+    required: true
   openai-api-type:
     description: 'The type of OpenAI API to use (e.g., azure)'
     required: true
@@ -88,7 +91,7 @@ runs:
       OPENAI_API_KEY: ${{ inputs.openai-api-key }}
       OPENAI_API_VERSION: ${{ inputs.openai-api-version }}
       OPENAI_API_BASE: ${{ inputs.openai-api-base }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ inputs.github-token }}
       GITHUB_COMMIT_SHA: ${{ github.event.pull_request.head.sha}}
     run: |
       set -e
