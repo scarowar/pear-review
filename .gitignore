@@ -1,0 +1,68 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.test
+.env.production
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+
+# Cache directories
+.cache/
+.npm/
+.eslintcache
+.prettier-cache
+
+# GitHub Actions
+.github/.release
+.github/.cache
+
+# TypeScript
+*.tsbuildinfo
+*.js.map
+
+# Project specific
+.genaiscript/
+**/genaiscript.d.ts
+genaisrc/*.js
+!genaisrc/*.genai.mjs
+*.temp
+*.bak
+
+# Operating System
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
