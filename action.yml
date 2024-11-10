@@ -56,7 +56,9 @@ runs:
   - name: Checkout code
     uses: actions/checkout@v4
     with:
-      fetch-depth: 10
+      fetch-depth: 0
+      ref: ${{ github.event.pull_request.head.sha }}
+      fetch-tags: false
 
   - name: Setup Git context
     shell: bash
