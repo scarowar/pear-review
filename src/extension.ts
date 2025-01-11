@@ -1,109 +1,130 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as simpleGit from 'simple-git';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "pear-review" is now active!');
-
-	const reviewChangesDisposable = vscode.commands.registerCommand('pear-review.reviewChanges', async () => {
-		const changes = await trackCodeChanges();
-		const prompt = buildReviewPrompt(changes);
-		vscode.window.showInformationMessage(`🍐 Review Prompt: ${prompt}`);
-	});
-
-	context.subscriptions.push(reviewChangesDisposable);
+interface ReviewComment {
+    filePath: string;
+    line: number;
+    code: string;
+    message: string;
+    severity: 'error' | 'warning' | 'info';
+    suggestions: Array<{
+        description: string;
+        code: string;
+    }>;
+    praise?: string;
 }
 
-// This method is called when your extension is deactivated
+export function activate(context: vscode.ExtensionContext) {
+    console.log('Congratulations, your extension "pear-review" is now active!');
+
+    const reviewChangesDisposable = vscode.commands.registerCommand('pear-review.reviewChanges', async () => {
+        const output = vscode.window.createOutputChannel("Pear Review");
+        output.show();
+        output.appendLine('Starting code review...');
+
+        try {
+            const changes = await trackCodeChanges();
+            output.appendLine(`Found ${changes.length} changed file(s)`);
+
+            const prompt = buildReviewPrompt(changes);
+            output.appendLine('Generated review prompt');
+            output.appendLine('Sending request to language model...');
+
+            const reviewComments = await generateReviewComments(prompt);
+            output.appendLine('Received response from language model');
+
+            const parsedComments = await parseChatResponse(reviewComments);
+            output.appendLine(`Parsed ${parsedComments.length} review comment(s)`);
+
+            if (parsedComments.length === 0) {
+                vscode.window.showWarningMessage('No review comments were generated. Please try again.');
+            } else {
+				console.log("Prettified JSON", JSON.stringify(parsedComments, null, 2));
+                vscode.window.showInformationMessage(`🍐 Generated ${parsedComments.length} review comments!`);
+            }
+        } catch (error) {
+            output.appendLine(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            vscode.window.showErrorMessage('Failed to generate review comments. Check output for details.');
+        }
+    });
+
+    context.subscriptions.push(reviewChangesDisposable);
+}
+
 export function deactivate() {}
 
 async function trackCodeChanges(): Promise<any[]> {
-	const workspaceFolders = vscode.workspace.workspaceFolders;
-	if (!workspaceFolders) {
-		vscode.window.showErrorMessage('No workspace folder is open.');
-		return [];
-	}
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+        vscode.window.showErrorMessage('No workspace folder is open.');
+        return [];
+    }
 
-	const workspacePath = workspaceFolders[0].uri.fsPath;
-	const git = simpleGit.default(workspacePath);
+    const workspacePath = workspaceFolders[0].uri.fsPath;
+    const git = simpleGit.default(workspacePath);
 
-	try {
-		// Ensure Git repository is initialized
-		const isRepo = await git.checkIsRepo();
-		if (!isRepo) {
-			vscode.window.showErrorMessage('No Git repository found in the workspace.');
-			return [];
-		}
+    try {
+        const isRepo = await git.checkIsRepo();
+        if (!isRepo) {
+            vscode.window.showErrorMessage('No Git repository found in the workspace.');
+            return [];
+        }
 
-		// Retrieve the list of changed files
-		const status = await git.status();
-		const changes = [];
+        const status = await git.status();
+        const changes = [];
 
-		for (const file of status.files) {
-			const filePath = path.join(workspacePath, file.path);
-			const fileUri = vscode.Uri.file(filePath);
-			let oldContent = '';
-			let newContent = '';
-			let diff = '';
-			let changeType = '';
+        for (const file of status.files) {
+            const filePath = path.join(workspacePath, file.path);
+            const fileUri = vscode.Uri.file(filePath);
+            let oldContent = '';
+            let newContent = '';
+            let diff = '';
+            let changeType = '';
 
-			try {
-				// Read the new content of the file
-				newContent = fs.readFileSync(filePath, 'utf8');
-			} catch (error) {
-				vscode.window.showWarningMessage(`Failed to read file: ${filePath}`);
-				continue;
-			}
+            try {
+                newContent = fs.readFileSync(filePath, 'utf8');
+            } catch (error) {
+                vscode.window.showWarningMessage(`Failed to read file: ${filePath}`);
+                continue;
+            }
 
-			if (file.index === 'A') {
-				changeType = 'added';
-			} else if (file.index === 'M') {
-				changeType = 'modified';
-				try {
-					// Get the old content of the file from the previous commit
-					oldContent = await git.show([`HEAD:${file.path}`]);
-				} catch (error) {
-					vscode.window.showWarningMessage(`Failed to get previous version of file: ${filePath}`);
-				}
-			} else if (file.index === 'R') {
-				changeType = 'renamed';
-			}
+            if (file.index === 'A') {
+                changeType = 'added';
+            } else if (file.index === 'M') {
+                changeType = 'modified';
+                try {
+                    oldContent = await git.show([`HEAD:${file.path}`]);
+                } catch (error) {
+                    vscode.window.showWarningMessage(`Failed to get previous version of file: ${filePath}`);
+                }
+            } else if (file.index === 'R') {
+                changeType = 'renamed';
+            }
 
-			// Get the diff between the old and new content
-			if (changeType === 'modified') {
-				diff = await git.diff([`HEAD:${file.path}`, file.path]);
-			}
+            if (changeType === 'modified') {
+                diff = await git.diff([`HEAD:${file.path}`, file.path]);
+            }
 
-			changes.push({
-				uri: fileUri,
-				oldContent,
-				newContent,
-				diff,
-				changeType
-			});
-		}
+            changes.push({
+                uri: fileUri,
+                oldContent,
+                newContent,
+                diff,
+                changeType
+            });
+        }
 
-		return changes;
-	} catch (error) {
-		if (error instanceof Error) {
-			vscode.window.showErrorMessage(`Failed to track code changes: ${error.message}`);
-		} else {
-			vscode.window.showErrorMessage('Failed to track code changes: Unknown error');
-		}
-		return [];
-	}
+        return changes;
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to track code changes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return [];
+    }
 }
 
 function buildReviewPrompt(changes: any[]): string {
-	const promptText = `
+    const promptText = `
 You are the Friendly Neighborhood Pear (🍐), a kind and empathetic code review assistant.
 Your personality is warm, supportive, and encouraging. You love helping developers grow and improve their code.
 
@@ -134,16 +155,16 @@ Use this JSON format for each review item:
 {
     "filePath": string,
     "line": number,
-    "code": string,        // The specific problematic code
-    "message": string,     // Friendly, encouraging explanation
+    "code": string,
+    "message": string,
     "severity": "error" | "warning" | "info",
-    "suggestions": [       // Array of specific code fixes
+    "suggestions": [
         {
-            "description": string,  // What this fix does
-            "code": string          // The actual code to replace with
+            "description": string,
+            "code": string
         }
     ],
-    "praise": string      // Something positive about the code (optional)
+    "praise": string
 }
 
 Remember:
@@ -154,12 +175,108 @@ Info: Helpful tips and best practices, delivered with warmth.
 Always be encouraging and supportive!
 `;
 
-	let reviewPrompt = promptText + '\n\nChanges:\n';
-	changes.forEach(change => {
-		reviewPrompt += `File: ${change.uri.fsPath}\n`;
-		reviewPrompt += `Change Type: ${change.changeType}\n`;
-		reviewPrompt += `Diff: ${change.diff}\n\n`;
-	});
+    let reviewPrompt = promptText + '\n\nFiles to review:\n';
 
-	return reviewPrompt;
+    changes.forEach(change => {
+        const relativePath = vscode.workspace.asRelativePath(change.uri);
+        reviewPrompt += `\n=== ${relativePath} (${change.changeType}) ===\n`;
+
+        const fileExtension = path.extname(relativePath).replace('.', '') || '';
+        reviewPrompt += `File extension: ${fileExtension}\n`;
+
+        const lines = change.newContent.split('\n');
+        reviewPrompt += `Total lines: ${lines.length}\n\n`;
+        lines.forEach((line: string, index: number) => {
+            reviewPrompt += `${index + 1}: ${line}\n`;
+        });
+
+        if (change.diff) {
+            reviewPrompt += '\nDiff:\n';
+            change.diff.split('\n').forEach((line: string) => {
+                if (line.startsWith('+')) {
+                    reviewPrompt += `Added: ${line.substring(1)}\n`;
+                } else if (line.startsWith('-')) {
+                    reviewPrompt += `Removed: ${line.substring(1)}\n`;
+                }
+            });
+        }
+
+        reviewPrompt += '\n';
+    });
+
+    return reviewPrompt;
+}
+
+async function generateReviewComments(prompt: string): Promise<vscode.LanguageModelChatResponse> {
+    let [model] = await vscode.lm.selectChatModels({
+        vendor: 'copilot',
+        family: 'gpt-4o'
+    });
+
+    if (!model) {
+        throw new Error('No language model available');
+    }
+
+    const messages = [
+        vscode.LanguageModelChatMessage.User(prompt)
+    ];
+
+    return model.sendRequest(
+        messages,
+        {},
+        new vscode.CancellationTokenSource().token
+    );
+}
+
+async function parseChatResponse(chatResponse: vscode.LanguageModelChatResponse): Promise<ReviewComment[]> {
+    const output = vscode.window.createOutputChannel("Pear Review Parser");
+    let accumulatedResponse = '';
+    const parsedComments: ReviewComment[] = [];
+
+    try {
+        for await (const fragment of chatResponse.text) {
+            accumulatedResponse += fragment;
+            output.appendLine(`Received fragment: ${fragment}`);
+
+            if (fragment.includes('}')) {
+                try {
+                    const matches = accumulatedResponse.match(/\{[^{]*\}/g);
+                    if (matches) {
+                        for (const match of matches) {
+                            try {
+                                const reviewComment: ReviewComment = JSON.parse(match);
+                                if (reviewComment.filePath && reviewComment.line && 
+                                    reviewComment.message && reviewComment.severity) {
+                                    parsedComments.push(reviewComment);
+                                    output.appendLine(`Successfully parsed comment for ${reviewComment.filePath}`);
+                                }
+                            } catch (parseError) {
+                                output.appendLine(`Failed to parse JSON: ${match}`);
+                            }
+                        }
+                        accumulatedResponse = accumulatedResponse.replace(/\{[^{]*\}/g, '');
+                    }
+                } catch (e) {
+                    output.appendLine(`Error processing fragment: ${e instanceof Error ? e.message : 'Unknown error'}`);
+                }
+            }
+        }
+
+        if (accumulatedResponse.trim()) {
+            try {
+                const reviewComment: ReviewComment = JSON.parse(accumulatedResponse);
+                if (reviewComment.filePath && reviewComment.line && 
+                    reviewComment.message && reviewComment.severity) {
+                    parsedComments.push(reviewComment);
+                }
+            } catch (e) {
+                output.appendLine(`Failed to parse remaining response: ${accumulatedResponse}`);
+            }
+        }
+    } catch (error) {
+        output.appendLine(`Error in parseChatResponse: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw error;
+    }
+
+    return parsedComments;
 }
