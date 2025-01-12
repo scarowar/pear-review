@@ -81,7 +81,7 @@ Perfect for:
 
 ## Known Issues
 
-See our [issues page](https://github.com/yourusername/pear-review/issues) for current known issues.
+See our [issues page](https://github.com/scarowar/pear-review/issues) for current known issues.
 
 ## Release Notes
 

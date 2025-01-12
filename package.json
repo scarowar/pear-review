@@ -1,8 +1,19 @@
 {
   "name": "pear-review",
   "displayName": "🍐 Pear Review",
-  "description": "Your friendly neighborhood code reviewer",
+  "description": "Your friendly neighborhood code reviewer providing immediate, empathetic feedback right in VS Code",
   "version": "0.1.1",
+  "publisher": "scarowar",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scarowar/pear-review.git"
+  },
+  "bugs": {
+    "url": "https://github.com/scarowar/pear-review/issues"
+  },
+  "homepage": "https://github.com/scarowar/pear-review#readme",
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -10,6 +21,13 @@
     "Programming Languages",
     "SCM Providers",
     "Other"
+  ],
+  "keywords": [
+    "code review",
+    "peer review",
+    "copilot",
+    "git",
+    "feedback"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -40,7 +58,8 @@
         "pearReview.autoReview": {
           "type": "boolean",
           "default": false,
-          "description": "Automatically review changes on save"
+          "description": "Automatically review changes on save",
+          "order": 1
         }
       }
     },
