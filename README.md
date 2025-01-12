@@ -1,6 +1,6 @@
 # 🍐 Pear Review
 
-![Pear Review](./images/pear-review-header.png)
+![Pear Review](./media/pear-review-header.png)
 
 [![Version](https://vsmarketplacebadges.dev/version/scarowar.pear-review.svg)](https://marketplace.visualstudio.com/items?itemName=scarowar.pear-review)
 [![Installs](https://vsmarketplacebadges.dev/installs/scarowar.pear-review.svg)](https://marketplace.visualstudio.com/items?itemName=scarowar.pear-review)
@@ -8,6 +8,14 @@
 [![License](https://img.shields.io/github/license/scarowar/pear-review)](LICENSE)
 
 Your friendly neighborhood code reviewer that provides immediate, empathetic feedback right in VS Code. Pear Review transforms the code review experience by bringing peer review benefits directly into your development environment.
+
+## Demo
+
+Watch your friendly Pear in action:
+
+![Pear Review Demo](./media/pear-review-demo.gif)
+
+Experience real-time, empathetic code review right in your editor!
 
 ## Features
 
