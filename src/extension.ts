@@ -13,11 +13,130 @@ interface ReviewComment {
         description: string;
         code: string;
     }>;
-    praise?: string;
+}
+
+const DIAGNOSTIC_SOURCE = '🍐 Pear Review';
+
+class DiagnosticManager {
+    private diagnosticCollection: vscode.DiagnosticCollection;
+
+    constructor(context: vscode.ExtensionContext) {
+        this.diagnosticCollection = vscode.languages.createDiagnosticCollection(DIAGNOSTIC_SOURCE);
+        context.subscriptions.push(this.diagnosticCollection);
+    }
+
+    async processDiagnostics(comments: ReviewComment[]): Promise<void> {
+        const reviewsByFile = new Map<string, ReviewComment[]>();
+
+        for (const review of comments) {
+            const existing = reviewsByFile.get(review.filePath) || [];
+            existing.push(review);
+            reviewsByFile.set(review.filePath, existing);
+        }
+
+        for (const [filePath, fileReviews] of reviewsByFile.entries()) {
+            try {
+                const uri = vscode.Uri.file(path.join(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath));
+                const document = await vscode.workspace.openTextDocument(uri);
+                const diagnostics = this.createDiagnostics(document, fileReviews);
+                this.diagnosticCollection.set(uri, diagnostics);
+            } catch (error) {
+                console.error(`Failed to process diagnostics for ${filePath}:`, error);
+            }
+        }
+    }
+
+    private createDiagnostics(document: vscode.TextDocument, reviews: ReviewComment[]): vscode.Diagnostic[] {
+        const diagnostics: vscode.Diagnostic[] = [];
+
+        for (const review of reviews) {
+            try {
+                const range = this.calculateRange(document, review);
+                if (!range) continue;
+
+                const diagnostic = new vscode.Diagnostic(
+                    range,
+                    review.message,
+                    this.getSeverity(review.severity)
+                );
+
+                diagnostic.source = DIAGNOSTIC_SOURCE;
+                diagnostic.code = review.code;
+
+                if (review.suggestions?.length > 0) {
+                    diagnostic.relatedInformation = [
+                        new vscode.DiagnosticRelatedInformation(
+                            new vscode.Location(document.uri, range),
+                            'Suggestions available'
+                        )
+                    ];
+                }
+
+                diagnostics.push(diagnostic);
+            } catch (error) {
+                console.error('Failed to create diagnostic:', error);
+            }
+        }
+
+        return diagnostics;
+    }
+
+    private calculateRange(document: vscode.TextDocument, review: ReviewComment): vscode.Range | null {
+        try {
+            const lineIndex = Math.max(0, review.line - 1);
+            if (lineIndex >= document.lineCount) return null;
+
+            const line = document.lineAt(lineIndex);
+            const text = line.text;
+
+            // Find the exact position of the code in the line
+            const startColumn = text.indexOf(review.code);
+            if (startColumn === -1) {
+                // If exact match not found, try to find a close match
+                const words = review.code.split(/\s+/);
+                const firstWord = words[0];
+                const approximateStart = text.indexOf(firstWord);
+
+                if (approximateStart !== -1) {
+                    return new vscode.Range(
+                        lineIndex, approximateStart,
+                        lineIndex, approximateStart + review.code.length
+                    );
+                }
+
+                // If still no match, highlight the entire line
+                return new vscode.Range(
+                    lineIndex, 0,
+                    lineIndex, text.length
+                );
+            }
+
+            return new vscode.Range(
+                lineIndex, startColumn,
+                lineIndex, startColumn + review.code.length
+            );
+        } catch (error) {
+            console.error('Failed to calculate range:', error);
+            return null;
+        }
+    }
+
+    private getSeverity(severity: string): vscode.DiagnosticSeverity {
+        const severityMap: Record<string, vscode.DiagnosticSeverity> = {
+            'error': vscode.DiagnosticSeverity.Error,
+            'warning': vscode.DiagnosticSeverity.Warning,
+            'info': vscode.DiagnosticSeverity.Information
+        };
+        return severityMap[severity] ?? vscode.DiagnosticSeverity.Information;
+    }
+
+    dispose(): void {
+        this.diagnosticCollection.dispose();
+    }
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Congratulations, your extension "pear-review" is now active!');
+    const diagnosticManager = new DiagnosticManager(context);
 
     const reviewChangesDisposable = vscode.commands.registerCommand('pear-review.reviewChanges', async () => {
         const output = vscode.window.createOutputChannel("Pear Review");
@@ -42,6 +161,7 @@ export function activate(context: vscode.ExtensionContext) {
                 vscode.window.showWarningMessage('No review comments were generated. Please try again.');
             } else {
 				console.log("Prettified JSON", JSON.stringify(parsedComments, null, 2));
+                diagnosticManager.processDiagnostics(parsedComments);
                 vscode.window.showInformationMessage(`🍐 Generated ${parsedComments.length} review comments!`);
             }
         } catch (error) {
@@ -50,7 +170,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    context.subscriptions.push(reviewChangesDisposable);
+    context.subscriptions.push(reviewChangesDisposable, diagnosticManager);
 }
 
 export function deactivate() {}
