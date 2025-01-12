@@ -1,71 +1,109 @@
-# pear-review README
+# 🍐 Pear Review
 
-This is the README for your extension "pear-review". After writing up a brief description, we recommend including the following sections.
+Your friendly neighborhood code reviewer that provides immediate, empathetic feedback right in VS Code. Pear Review transforms the code review experience by bringing peer review benefits directly into your development environment.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### 🔄 Real-Time Code Review
+Receive immediate, actionable feedback on your code changes as you work:
+- Automatic review on save (optional)
+- Manual review with a single click
+- Detailed inline suggestions and improvements
 
-For example if there is an image subfolder under your extension project workspace:
+### 🌱 Supportive Environment
+Experience code review in a private, pressure-free space:
+- Kind, constructive feedback
+- Encouraging messages for good practices
+- Empathetic suggestions for improvements
 
-\!\[feature X\]\(images/feature-x.png\)
+### 🎯 Comprehensive Analysis
+Get insights on multiple aspects of your code:
+- Code readability and structure
+- Maintainability improvements
+- Efficiency optimizations
+- Security considerations
+- Error handling patterns
+- Testing suggestions
+- Documentation completeness
+- Style consistency
+- Version control best practices
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+### 🔧 Seamless Integration
+Work naturally within your VS Code environment:
+- Status bar controls for quick access
+- Toggle-able review comments
+- Git integration for changed files
+- GitHub Copilot-powered insights
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- Visual Studio Code v1.96.0 or higher
+- Git installed and initialized in your workspace
+- GitHub Copilot extension installed and configured
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+Pear Review contributes the following settings:
 
-For example:
+* `pearReview.autoReview`: Enable/disable automatic code review on save
 
-This extension contributes the following settings:
+## Commands
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+Access these commands through the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
+
+* `🍐 Review`: Manually trigger a review of your changes
+* `🍐 Toggle Auto Review`: Enable/disable automatic review on save
+* `🍐 Toggle Review Annotations`: Show/hide review comments
+
+## Getting Started
+
+1. Install the extension
+2. Open a Git-initialized workspace
+3. Make some changes to your code
+4. Click the 🍐 icon in the status bar or use the command palette to trigger a review
+5. Review the suggestions and improvements inline
+
+## Why Pear Review?
+
+Traditional code reviews often come late in the development cycle and can feel intimidating. Pear Review addresses these challenges by:
+
+- Providing immediate feedback during development
+- Creating a safe space for improvement
+- Maintaining consistent review quality
+- Enabling private refinement before public reviews
+
+Perfect for:
+- Starting new projects with best practices
+- Learning and growing with each code change
+- Building productive coding habits
+- Navigating career transitions
+- Gaining confidence before team reviews
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+See our [issues page](https://github.com/yourusername/pear-review/issues) for current known issues.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.1.1
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+- Pre-release of Pear Review
+- Real-time code review functionality
+- Automatic review on save option
+- Inline review comments
+- Git integration
+- Status bar controls
 
 ---
 
-## Following extension guidelines
+## Contributing
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+We welcome contributions! Please check our [contribution guidelines](CONTRIBUTING.md) for details.
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+## License
 
-## Working with Markdown
+This extension is licensed under [GNU General Public License v3.0](LICENSE).
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+---
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**Happy Coding with your friendly Pear! 🍐**
