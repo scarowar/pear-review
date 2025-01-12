@@ -15,6 +15,8 @@ Watch your friendly Pear in action:
 
 ![Pear Review Demo](./media/pear-review-demo.gif)
 
+▶️ For a more detailed walkthrough, check out our [video demo on YouTube](https://youtu.be/NYqc95rH0YM?si=hhVOjaXv8KAAJXvG).
+
 Experience real-time, empathetic code review right in your editor!
 
 ## Features
