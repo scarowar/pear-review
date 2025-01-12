@@ -52,7 +52,7 @@ class DiagnosticManager {
         for (const review of reviews) {
             try {
                 const range = this.calculateRange(document, review);
-                if (!range) continue;
+                if (!range) {continue;}
 
                 const diagnostic = new vscode.Diagnostic(
                     range,
@@ -84,7 +84,7 @@ class DiagnosticManager {
     private calculateRange(document: vscode.TextDocument, review: ReviewComment): vscode.Range | null {
         try {
             const lineIndex = Math.max(0, review.line - 1);
-            if (lineIndex >= document.lineCount) return null;
+            if (lineIndex >= document.lineCount) {return null;}
 
             const line = document.lineAt(lineIndex);
             const text = line.text;
@@ -135,38 +135,136 @@ class DiagnosticManager {
     }
 }
 
+class PrerequisiteChecker {
+    private readonly greetings = [
+        "Hey there! Your friendly Pear pal is here to help! 🍐",
+        "Ready to make your code pear-fectly amazing! 🍐",
+        "Let's grow something wonderful together! 🍐",
+        "Time for some fruitful collaboration! 🍐",
+        "Your code's about to get even more a-pear-ling! 🍐",
+        "Let's make your code shine like a perfectly ripe pear! 🍐"
+    ];
+
+    private async checkGitAvailability(workspacePath: string): Promise<boolean> {
+        try {
+            const git = simpleGit.default(workspacePath);
+            await git.raw(['--version']);
+            return true;
+        } catch (error) {
+            throw new Error('Git is not available. Please ensure Git is installed and configured.');
+        }
+    }
+
+    private async checkWorkspace(): Promise<string> {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            throw new Error('No workspace folder is open.');
+        }
+        const workspacePath = workspaceFolders[0].uri.fsPath;
+        const git = simpleGit.default(workspacePath);
+
+        const isRepo = await git.checkIsRepo();
+        if (!isRepo) {
+            throw new Error('This workspace is not a Git repository.');
+        }
+
+        return workspacePath;
+    }
+
+    private async checkLanguageModel(): Promise<vscode.LanguageModelChat> {
+        const [model] = await vscode.lm.selectChatModels({
+            vendor: 'copilot',
+            family: 'gpt-4o'
+        });
+
+        if (!model) {
+            throw new Error('Language model is not available. Please ensure GitHub Copilot is properly configured.');
+        }
+
+        return model;
+    }
+
+    private getRandomGreeting(): string {
+        const randomIndex = Math.floor(Math.random() * this.greetings.length);
+        return this.greetings[randomIndex];
+    }
+
+    async validateAll(): Promise<{ workspacePath: string, model: vscode.LanguageModelChat }> {
+        const workspacePath = await this.checkWorkspace();
+        await this.checkGitAvailability(workspacePath);
+        const model = await this.checkLanguageModel();
+
+        vscode.window.showInformationMessage(this.getRandomGreeting());
+
+        return { workspacePath, model };
+    }
+}
+
 export function activate(context: vscode.ExtensionContext) {
     const diagnosticManager = new DiagnosticManager(context);
+    const prerequisiteChecker = new PrerequisiteChecker();
+
+    const progressMessages = [
+        "Taking a sweet look at your code 🌱",
+        "Finding the juiciest improvements 🍐",
+        "Carefully tending to your changes 🌿",
+        "Helping your code bloom and grow 🌸",
+        "Sprinkling some pear-fection ✨",
+        "Adding a dash of coding magic 🧙‍♂️",
+        "Making everything fresh and crisp 🍃",
+        "Nurturing your code with care 💖",
+        "Bringing out the best flavors 🍎",
+        "Preparing some pear-ticular insights 📝"
+    ];
 
     const reviewChangesDisposable = vscode.commands.registerCommand('pear-review.reviewChanges', async () => {
-        const output = vscode.window.createOutputChannel("Pear Review");
-        output.show();
-        output.appendLine('Starting code review...');
-
         try {
-            const changes = await trackCodeChanges();
-            output.appendLine(`Found ${changes.length} changed file(s)`);
+            await prerequisiteChecker.validateAll();
 
-            const prompt = buildReviewPrompt(changes);
-            output.appendLine('Generated review prompt');
-            output.appendLine('Sending request to language model...');
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: "🍐 Pear Review",
+                cancellable: false
+            }, async (progress) => {
+                let messageIndex = 0;
+                const intervalId = setInterval(() => {
+                    progress.report({
+                        message: progressMessages[messageIndex % progressMessages.length],
+                        increment: 5
+                    });
+                    messageIndex++;
+                }, 2500);
 
-            const reviewComments = await generateReviewComments(prompt);
-            output.appendLine('Received response from language model');
+                try {
+                    const changes = await trackCodeChanges();
+                    if (changes.length === 0) {
+                        vscode.window.showInformationMessage('No changes found to review.');
+                        return;
+                    }
 
-            const parsedComments = await parseChatResponse(reviewComments);
-            output.appendLine(`Parsed ${parsedComments.length} review comment(s)`);
+                    const prompt = buildReviewPrompt(changes);
 
-            if (parsedComments.length === 0) {
-                vscode.window.showWarningMessage('No review comments were generated. Please try again.');
-            } else {
-				console.log("Prettified JSON", JSON.stringify(parsedComments, null, 2));
-                diagnosticManager.processDiagnostics(parsedComments);
-                vscode.window.showInformationMessage(`🍐 Generated ${parsedComments.length} review comments!`);
-            }
+                    const reviewComments = await generateReviewComments(prompt);
+
+                    const parsedComments = await parseChatResponse(reviewComments);
+
+                    if (parsedComments.length === 0) {
+                        vscode.window.showWarningMessage('No review comments were generated. Please try again.');
+                    } else {
+                        await diagnosticManager.processDiagnostics(parsedComments);
+                        vscode.window.showInformationMessage(`🍐 Generated ${parsedComments.length} review comments!`);
+                    }
+                } finally {
+                    clearInterval(intervalId);
+                }
+            });
         } catch (error) {
-            output.appendLine(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            vscode.window.showErrorMessage('Failed to generate review comments. Check output for details.');
+            if (error instanceof Error && error.message.includes('Ingestion endpoint')) {
+                console.debug('Ignoring Application Insights error:', error);
+            } else {
+                vscode.window.showErrorMessage(`Pear Review: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+            return;
         }
     });
 
@@ -327,25 +425,37 @@ Always be encouraging and supportive!
     return reviewPrompt;
 }
 
+// Update generateReviewComments to include retry logic
 async function generateReviewComments(prompt: string): Promise<vscode.LanguageModelChatResponse> {
-    let [model] = await vscode.lm.selectChatModels({
-        vendor: 'copilot',
-        family: 'gpt-4o'
-    });
+    const maxRetries = 3;
+    let lastError: Error | null = null;
 
-    if (!model) {
-        throw new Error('No language model available');
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const [model] = await vscode.lm.selectChatModels({
+                vendor: 'copilot',
+                family: 'gpt-4o'
+            });
+
+            if (!model) {
+                throw new Error('No language model available');
+            }
+
+            return await model.sendRequest(
+                [vscode.LanguageModelChatMessage.User(prompt)],
+                {},
+                new vscode.CancellationTokenSource().token
+            );
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error('Unknown error');
+            if (attempt === maxRetries) {
+                throw lastError;
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
     }
 
-    const messages = [
-        vscode.LanguageModelChatMessage.User(prompt)
-    ];
-
-    return model.sendRequest(
-        messages,
-        {},
-        new vscode.CancellationTokenSource().token
-    );
+    throw lastError || new Error('Failed to generate review comments');
 }
 
 async function parseChatResponse(chatResponse: vscode.LanguageModelChatResponse): Promise<ReviewComment[]> {
