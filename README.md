@@ -1,6 +1,6 @@
 # 🍐 Pear Review
 
-![Pear Review](pear-review-header.png)
+![Pear Review](./images/pear-review-header.png)
 
 [![Version](https://vsmarketplacebadges.dev/version/scarowar.pear-review.svg)](https://marketplace.visualstudio.com/items?itemName=scarowar.pear-review)
 [![Installs](https://vsmarketplacebadges.dev/installs/scarowar.pear-review.svg)](https://marketplace.visualstudio.com/items?itemName=scarowar.pear-review)
