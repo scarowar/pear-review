@@ -17,6 +17,11 @@
         "command": "pear-review.reviewChanges",
         "title": "🍐 Review Changes",
         "category": "Pear Review"
+      },
+      {
+        "command": "pear-review.toggleDiagnostics",
+        "title": "🍐 Toggle Review Comments",
+        "category": "Pear Review"
       }
     ]
   },

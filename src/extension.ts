@@ -19,6 +19,9 @@ const DIAGNOSTIC_SOURCE = '🍐 Pear Review';
 
 class DiagnosticManager {
     private diagnosticCollection: vscode.DiagnosticCollection;
+    private storedDiagnostics = new Map<string, vscode.Diagnostic[]>();
+    public diagnosticsVisible: boolean = true;
+    public hasDiagnostics: boolean = false;
 
     constructor(context: vscode.ExtensionContext) {
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection(DIAGNOSTIC_SOURCE);
@@ -34,14 +37,34 @@ class DiagnosticManager {
             reviewsByFile.set(review.filePath, existing);
         }
 
+        // Collect all diagnostics in a temp map
+        const newDiagnostics = new Map<string, vscode.Diagnostic[]>();
+
         for (const [filePath, fileReviews] of reviewsByFile.entries()) {
             try {
                 const uri = vscode.Uri.file(path.join(vscode.workspace.workspaceFolders![0].uri.fsPath, filePath));
                 const document = await vscode.workspace.openTextDocument(uri);
                 const diagnostics = this.createDiagnostics(document, fileReviews);
-                this.diagnosticCollection.set(uri, diagnostics);
+                newDiagnostics.set(uri.toString(), diagnostics);
             } catch (error) {
                 console.error(`Failed to process diagnostics for ${filePath}:`, error);
+            }
+        }
+
+        if (comments.length > 0) {
+            this.hasDiagnostics = true;
+        }
+        
+        // Clear old references
+        if (this.diagnosticsVisible) {
+            this.diagnosticCollection.clear();
+            for (const [uriStr, diags] of newDiagnostics) {
+                this.diagnosticCollection.set(vscode.Uri.parse(uriStr), diags);
+            }
+        } else {
+            this.storedDiagnostics.clear();
+            for (const [uriStr, diags] of newDiagnostics) {
+                this.storedDiagnostics.set(uriStr, diags);
             }
         }
     }
@@ -130,21 +153,31 @@ class DiagnosticManager {
         return severityMap[severity] ?? vscode.DiagnosticSeverity.Information;
     }
 
+    toggleDiagnosticsVisibility(): void {
+        this.diagnosticsVisible = !this.diagnosticsVisible;
+        if (!this.diagnosticsVisible) {
+            this.storedDiagnostics.clear();
+            for (const [uri, diags] of this.diagnosticCollection) {
+                this.storedDiagnostics.set(uri.toString(), [...diags]);
+            }
+            this.diagnosticCollection.clear();
+            vscode.window.showInformationMessage('🍐 Review comments are now hidden.');
+        } else {
+            this.diagnosticCollection.clear();
+            for (const [uriStr, diags] of this.storedDiagnostics) {
+                this.diagnosticCollection.set(vscode.Uri.parse(uriStr), diags);
+            }
+            this.storedDiagnostics.clear();
+            vscode.window.showInformationMessage('🍐 Review comments are now visible.');
+        }
+    }
+
     dispose(): void {
         this.diagnosticCollection.dispose();
     }
 }
 
 class PrerequisiteChecker {
-    private readonly greetings = [
-        "Hey there! Your friendly Pear pal is here to help! 🍐",
-        "Ready to make your code pear-fectly amazing! 🍐",
-        "Let's grow something wonderful together! 🍐",
-        "Time for some fruitful collaboration! 🍐",
-        "Your code's about to get even more a-pear-ling! 🍐",
-        "Let's make your code shine like a perfectly ripe pear! 🍐"
-    ];
-
     private async checkGitAvailability(workspacePath: string): Promise<boolean> {
         try {
             const git = simpleGit.default(workspacePath);
@@ -184,23 +217,16 @@ class PrerequisiteChecker {
         return model;
     }
 
-    private getRandomGreeting(): string {
-        const randomIndex = Math.floor(Math.random() * this.greetings.length);
-        return this.greetings[randomIndex];
-    }
-
     async validateAll(): Promise<{ workspacePath: string, model: vscode.LanguageModelChat }> {
         const workspacePath = await this.checkWorkspace();
         await this.checkGitAvailability(workspacePath);
         const model = await this.checkLanguageModel();
 
-        vscode.window.showInformationMessage(this.getRandomGreeting());
-
         return { workspacePath, model };
     }
 }
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
     const diagnosticManager = new DiagnosticManager(context);
     const prerequisiteChecker = new PrerequisiteChecker();
 
@@ -225,7 +251,7 @@ export function activate(context: vscode.ExtensionContext) {
                 location: vscode.ProgressLocation.Notification,
                 title: "🍐 Pear Review",
                 cancellable: false
-            }, async (progress) => {
+            }, async (progress): Promise<void> => {
                 let messageIndex = 0;
                 const intervalId = setInterval(() => {
                     progress.report({
@@ -238,7 +264,7 @@ export function activate(context: vscode.ExtensionContext) {
                 try {
                     const changes = await trackCodeChanges();
                     if (changes.length === 0) {
-                        vscode.window.showInformationMessage('No changes found to review.');
+                        vscode.window.showInformationMessage("🍐 No changes found.");
                         return;
                     }
 
@@ -254,24 +280,45 @@ export function activate(context: vscode.ExtensionContext) {
                         await diagnosticManager.processDiagnostics(parsedComments);
                         vscode.window.showInformationMessage(`🍐 Generated ${parsedComments.length} review comments!`);
                     }
+
+                    if (parsedComments.length > 0 && diagnosticManager.hasDiagnostics) {
+                        statusBarToggle.show();
+                    }
+                } catch (err: unknown) {
+                    handlePearError(err, "Review process failed");
                 } finally {
                     clearInterval(intervalId);
                 }
             });
-        } catch (error) {
-            if (error instanceof Error && error.message.includes('Ingestion endpoint')) {
-                console.debug('Ignoring Application Insights error:', error);
-            } else {
-                vscode.window.showErrorMessage(`Pear Review: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            }
-            return;
+        } catch (error: unknown) {
+            handlePearError(error, "Activation error");
         }
     });
 
-    context.subscriptions.push(reviewChangesDisposable, diagnosticManager);
+    const toggleDiagnosticsDisposable = vscode.commands.registerCommand('pear-review.toggleDiagnostics', () => {
+        if (!diagnosticManager.hasDiagnostics) {
+            return;
+        }
+        diagnosticManager.toggleDiagnosticsVisibility();
+        statusBarToggle.text = diagnosticManager.diagnosticsVisible
+            ? '$(eye) Hide Review Comments'
+            : '$(eye-closed) Show Review Comments';
+    });
+
+    context.subscriptions.push(reviewChangesDisposable, toggleDiagnosticsDisposable, diagnosticManager);
+
+    const statusBarToggle = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    statusBarToggle.command = 'pear-review.toggleDiagnostics';
+    statusBarToggle.text = '$(eye) Hide Review Comments';
+    context.subscriptions.push(statusBarToggle);
 }
 
-export function deactivate() {}
+export function deactivate(): void {}
+
+function handlePearError(error: unknown, contextMessage: string): void {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    vscode.window.showErrorMessage(`🍐 ${contextMessage}: ${errorMsg}`);
+}
 
 async function trackCodeChanges(): Promise<any[]> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
