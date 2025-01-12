@@ -3,6 +3,9 @@
 ![Pear Review](./media/pear-review-header.png)
 
 [![License](https://img.shields.io/github/license/scarowar/pear-review)](LICENSE)
+[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/Scarowar.pear-review)](https://marketplace.visualstudio.com/items?itemName=Scarowar.pear-review)
+[![VS Code Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/Scarowar.pear-review)](https://marketplace.visualstudio.com/items?itemName=Scarowar.pear-review)
+[![VS Code Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/Scarowar.pear-review)](https://marketplace.visualstudio.com/items?itemName=Scarowar.pear-review)
 
 Your friendly neighborhood code reviewer that provides immediate, empathetic feedback right in VS Code. Pear Review transforms the code review experience by bringing peer review benefits directly into your development environment.
 
@@ -69,7 +72,7 @@ Access these commands through the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P
 
 ## Getting Started
 
-1. Install the extension
+1. Install the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Scarowar.pear-review)
 2. Open a Git-initialized workspace
 3. Make some changes to your code
 4. Click the 🍐 icon in the status bar or use the command palette to trigger a review
