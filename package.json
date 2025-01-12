@@ -1,9 +1,9 @@
 {
   "name": "pear-review",
-  "displayName": "🍐 Pear Review",
+  "displayName": "Pear Review - AI Code Review",
   "description": "Your friendly neighborhood code reviewer providing immediate, empathetic feedback right in VS Code",
   "version": "0.1.1",
-  "icon": "pear-review-icon.png",
+  "icon": "./media/pear-review-icon.png",
   "galleryBanner": {
     "color": "#ffffff",
     "theme": "light"
