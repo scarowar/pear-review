@@ -3,6 +3,11 @@
   "displayName": "🍐 Pear Review",
   "description": "Your friendly neighborhood code reviewer providing immediate, empathetic feedback right in VS Code",
   "version": "0.1.1",
+  "icon": "pear-review-icon.png",
+  "galleryBanner": {
+    "color": "#ffffff",
+    "theme": "light"
+  },
   "publisher": "scarowar",
   "private": true,
   "license": "GPL-3.0-or-later",
@@ -18,8 +23,8 @@
     "vscode": "^1.96.0"
   },
   "categories": [
+    "Linters",
     "Programming Languages",
-    "SCM Providers",
     "Other"
   ],
   "keywords": [
