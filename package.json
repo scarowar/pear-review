@@ -1,29 +1,73 @@
 {
   "name": "pear-review",
-  "displayName": "Pear Review",
-  "description": "",
-  "version": "0.0.1",
+  "displayName": "🍐 Pear Review",
+  "description": "Your friendly neighborhood code reviewer",
+  "version": "0.1.1",
   "engines": {
     "vscode": "^1.96.0"
   },
   "categories": [
+    "Programming Languages",
+    "SCM Providers",
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "pear-review.reviewChanges",
-        "title": "🍐 Review Changes",
+        "title": "🍐 Review",
+        "category": "Pear Review",
+        "enablement": "pearReview.isReady"
+      },
+      {
+        "command": "pear-review.toggleAutoReview",
+        "title": "🍐 Toggle Auto Review",
         "category": "Pear Review"
       },
       {
-        "command": "pear-review.toggleDiagnostics",
-        "title": "🍐 Toggle Review Comments",
+        "command": "pear-review.toggleReviewComments",
+        "title": "🍐 Toggle Review Annotations",
         "category": "Pear Review"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "🍐 Pear Review",
+      "properties": {
+        "pearReview.autoReview": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically review changes on save"
+        }
+      }
+    },
+    "menus": {
+      "editor/title": [
+        {
+          "command": "pear-review.reviewChanges",
+          "group": "navigation",
+          "when": "resourceScheme == file && pearReview.isReady",
+          "icon": "$(notebook-render-output)"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "pear-review.reviewChanges",
+          "when": "pearReview.isReady"
+        },
+        {
+          "command": "pear-review.toggleAutoReview",
+          "when": "pearReview.isReady"
+        },
+        {
+          "command": "pear-review.toggleReviewComments",
+          "when": "pearReview.isReady"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -34,15 +78,17 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@types/vscode": "^1.96.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
-    "@types/vscode": "^1.96.0",
     "@typescript-eslint/eslint-plugin": "^8.17.0",
     "@typescript-eslint/parser": "^8.17.0",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1",
     "eslint": "^9.16.0",
-    "simple-git": "^3.27.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1"
+  },
+  "dependencies": {
+    "simple-git": "^3.22.0"
   }
 }
