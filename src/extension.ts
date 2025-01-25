@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import simpleGit, { SimpleGit } from 'simple-git';
+import * as crypto from 'crypto';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Types & Interfaces
@@ -137,6 +138,7 @@ export class GitService {
  */
 export class ReviewService {
     private previousReviews = new Map<string, ReviewComment[]>();
+    private reviewCache = new Map<string, ReviewComment[]>();
     private diagnosticCollection: vscode.DiagnosticCollection;
     private cachedDiagnostics = new Map<string, vscode.Diagnostic[]>();
     private isVisible = true;
@@ -155,6 +157,14 @@ export class ReviewService {
 
         for (const file of files) {
             const filePath = vscode.workspace.asRelativePath(file.uri);
+            const contentHash = this.calculateContentHash(file.content);
+
+            // Check cache for existing reviews
+            if (this.reviewCache.has(contentHash)) {
+                allReviews.push(...this.reviewCache.get(contentHash)!);
+                continue;
+            }
+
             const contentWithContext = this.prepareCodeWithContext(file.content, file.uri);
 
             // Create the prompt for the individual file
@@ -172,6 +182,9 @@ export class ReviewService {
 
             const reviews = await this.parseReviewResponse(chatResponse);
             allReviews.push(...reviews);
+
+            // Cache the reviews
+            this.reviewCache.set(contentHash, reviews);
         }
 
         await this.processDiagnostics(allReviews);
@@ -191,6 +204,10 @@ export class ReviewService {
         if (allReviews.length === 0) {
             vscode.window.showInformationMessage(this.getRandomPraiseMessage());
         }
+    }
+
+    private calculateContentHash(content: string): string {
+        return crypto.createHash('sha256').update(content).digest('hex');
     }
 
     private prepareCodeWithContext(content: string, uri: vscode.Uri): string {
